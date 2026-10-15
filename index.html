@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f3e9" />
+    <meta name="description" content="Susi World, a cozy little space for to-dos, moods, and sweet notes." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Susi World" />
+    <title>Susi World</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#home" data-go="home" aria-label="Susi World home">
+          <span class="brand-mark" aria-hidden="true">s</span>
+          <span class="brand-copy"><span class="greeting" id="greet">Hello, Susi</span><span class="brand-name">Susi World</span></span>
+        </a>
+        <div class="header-actions"><span class="day-mark"><span class="day-dot"></span><span id="todayShort">A little space for you</span></span><button class="install-button" id="installBtn" type="button">Install</button></div>
+      </header>
+
+      <main>
+        <section class="view active" id="view-home" aria-labelledby="home-h">
+          <h1 class="sr-only" id="home-h">Today</h1>
+          <div class="welcome-panel">
+            <div class="welcome-copy">
+              <p class="eyebrow" id="today"></p>
+              <h2>Make room for<br /><span>the little things.</span></h2>
+              <p class="quote" id="quote"></p>
+            </div>
+            <div class="sun-doodle" aria-hidden="true"><span>✳</span><i></i><b></b></div>
+          </div>
+
+          <div class="stats" aria-label="Your day at a glance">
+            <button class="stat stat-mint" data-go="todos"><span class="stat-top"><span class="stat-number" id="statTodos">0</span><span class="stat-icon" aria-hidden="true">↗</span></span><span class="stat-label">things to do</span></button>
+            <button class="stat stat-peach" data-go="mood"><span class="stat-top"><span class="stat-number" id="statMood">—</span><span class="stat-icon" aria-hidden="true">♡</span></span><span class="stat-label">today’s mood</span></button>
+            <button class="stat stat-lilac" data-go="notes"><span class="stat-top"><span class="stat-number" id="statNotes">0</span><span class="stat-icon" aria-hidden="true">✳</span></span><span class="stat-label">sweet notes</span></button>
+          </div>
+
+          <div class="home-columns">
+            <section class="section-block" aria-labelledby="next-title">
+              <div class="section-heading"><div><p class="eyebrow">ONE THING AT A TIME</p><h2 id="next-title">Up next</h2></div><button class="text-button" data-go="todos">See all <span aria-hidden="true">↗</span></button></div>
+              <ul class="todo-list home-list" id="homeTodos"></ul>
+              <p class="empty-state" id="homeTodosEmpty">Nothing waiting on you. Enjoy the breathing room.</p>
+            </section>
+            <section class="section-block note-preview" aria-labelledby="latest-title">
+              <div class="section-heading"><div><p class="eyebrow">A LITTLE REMINDER</p><h2 id="latest-title">Latest note</h2></div><button class="text-button" data-go="notes">See all <span aria-hidden="true">↗</span></button></div>
+              <div id="homeNote"></div>
+              <p class="empty-state" id="homeNoteEmpty">Leave a kind thought here for later.</p>
+            </section>
+          </div>
+          <section class="game-feature" aria-labelledby="game-feature-title">
+            <div class="game-feature-copy"><p class="eyebrow">A CHANGE OF PACE</p><h2 id="game-feature-title">A little play?</h2><p>Four tiny puzzles for a curious minute.</p></div>
+            <button class="primary-button" data-go="games">Visit the game nook <span aria-hidden="true">→</span></button>
+          </section>
+        </section>
+
+        <section class="view" id="view-todos" aria-labelledby="todos-h" hidden>
+          <div class="view-heading"><p class="eyebrow">SMALL STEPS COUNT</p><h1 id="todos-h">To-dos</h1><p>Give your thoughts somewhere to land.</p></div>
+          <form class="add-form" id="todoForm"><label class="sr-only" for="todoInput">New to-do</label><input id="todoInput" maxlength="200" placeholder="Add something lovely to do…" autocomplete="off" /><button class="primary-button" type="submit">Add <span aria-hidden="true">＋</span></button></form>
+          <div class="list-heading"><h2>Your list</h2><span id="todoCount">0 open</span></div>
+          <ul class="todo-list full-list" id="todoList"></ul>
+          <p class="empty-state empty-large" id="todoEmpty">Your list is clear. What would feel good to do?</p>
+        </section>
+
+        <section class="view" id="view-mood" aria-labelledby="mood-h" hidden>
+          <div class="view-heading"><p class="eyebrow">CHECK IN WITH YOURSELF</p><h1 id="mood-h">How are you feeling?</h1><p>There’s no wrong answer. Just notice where you are.</p></div>
+          <form class="mood-form" id="moodForm">
+            <fieldset class="moods"><legend class="sr-only">Choose your mood</legend>
+              <label><input type="radio" name="mood" value="1|😢" /><span class="mood-face">😢</span><span class="mood-name">Low</span></label>
+              <label><input type="radio" name="mood" value="2|😕" /><span class="mood-face">😕</span><span class="mood-name">Meh</span></label>
+              <label><input type="radio" name="mood" value="3|😌" /><span class="mood-face">😌</span><span class="mood-name">Okay</span></label>
+              <label><input type="radio" name="mood" value="4|😊" /><span class="mood-face">😊</span><span class="mood-name">Good</span></label>
+              <label><input type="radio" name="mood" value="5|🥰" /><span class="mood-face">🥰</span><span class="mood-name">Amazing</span></label>
+            </fieldset>
+            <label class="sr-only" for="moodNote">Optional mood note</label><textarea id="moodNote" maxlength="280" rows="2" placeholder="Anything on your mind? (optional)"></textarea>
+            <div class="form-footer"><span id="moodSavedHint">Your check-in stays just with you.</span><button class="primary-button" type="submit">Save check-in <span aria-hidden="true">→</span></button></div>
+          </form>
+          <section class="history-section" aria-labelledby="history-title"><div class="list-heading"><h2 id="history-title">Recent check-ins</h2><span>Last 14 days</span></div><div class="mood-chart" id="moodChart" aria-label="Mood history"></div><ul class="mood-history" id="moodList"></ul><p class="empty-state" id="moodEmpty">Your first check-in will show up here.</p></section>
+        </section>
+
+        <section class="view" id="view-notes" aria-labelledby="notes-h" hidden>
+          <div class="view-heading"><p class="eyebrow">KEEP WHAT MATTERS</p><h1 id="notes-h">Sweet notes</h1><p>A memory, a wish, or something worth remembering.</p></div>
+          <form class="note-form" id="noteForm"><label class="sr-only" for="noteInput">Write a note</label><textarea id="noteInput" maxlength="500" rows="3" placeholder="Write a little note, a memory or a wish…"></textarea><div class="note-actions"><fieldset class="swatches"><legend class="sr-only">Note color</legend><label><input type="radio" name="color" value="pink" checked /><span class="swatch swatch-pink" aria-label="Pink"></span></label><label><input type="radio" name="color" value="peach" /><span class="swatch swatch-peach" aria-label="Peach"></span></label><label><input type="radio" name="color" value="lilac" /><span class="swatch swatch-lilac" aria-label="Lilac"></span></label><label><input type="radio" name="color" value="mint" /><span class="swatch swatch-mint" aria-label="Mint"></span></label></fieldset><button class="primary-button" type="submit">Pin note <span aria-hidden="true">↗</span></button></div></form>
+          <div class="notes-grid" id="noteGrid"></div>
+          <p class="empty-state empty-large" id="notesEmpty">Your little collection starts with one note.</p>
+        </section>
+
+        <section class="view" id="view-games" aria-labelledby="games-h" hidden>
+          <div class="view-heading"><p class="eyebrow">A SMALL BRAIN BREAK</p><h1 id="games-h">The game nook</h1><p>Pick a puzzle, settle in, and see where your thinking takes you.</p></div>
+          <div class="game-grid" id="gameCatalog">
+            <button class="game-card game-card-mint" data-start-game="tictactoe"><span class="game-card-icon" aria-hidden="true">×○</span><span class="game-card-copy"><strong>Tic-tac-toe</strong><span>Can you outsmart the little computer?</span></span><span class="game-card-arrow" aria-hidden="true">↗</span></button>
+            <button class="game-card game-card-peach" data-start-game="memory"><span class="game-card-icon" aria-hidden="true">◈</span><span class="game-card-copy"><strong>Memory match</strong><span>Find all eight matching pairs.</span></span><span class="game-card-arrow" aria-hidden="true">↗</span></button>
+            <button class="game-card game-card-lilac" data-start-game="sequence"><span class="game-card-icon" aria-hidden="true">1, 2, ?</span><span class="game-card-copy"><strong>Number trail</strong><span>Spot the pattern and pick what comes next.</span></span><span class="game-card-arrow" aria-hidden="true">↗</span></button>
+            <button class="game-card game-card-pink" data-start-game="codebreaker"><span class="game-card-icon" aria-hidden="true">●●</span><span class="game-card-copy"><strong>Codebreaker</strong><span>Crack the four-digit color code.</span></span><span class="game-card-arrow" aria-hidden="true">↗</span></button>
+          </div>
+          <div class="game-play" id="gamePlay" hidden>
+            <button class="game-back" id="gameBack"><span aria-hidden="true">←</span> All games</button>
+            <div id="gameContent"></div>
+          </div>
+        </section>
+      </main>
+
+      <nav class="tabs" aria-label="Sections">
+        <button data-go="home" class="tab-button active" aria-current="page"><span aria-hidden="true">⌂</span><span>Home</span></button>
+        <button data-go="todos" class="tab-button"><span aria-hidden="true">☷</span><span>To-dos</span></button>
+        <button data-go="mood" class="tab-button"><span aria-hidden="true">♡</span><span>Mood</span></button>
+        <button data-go="notes" class="tab-button"><span aria-hidden="true">✳</span><span>Notes</span></button>
+        <button data-go="games" class="tab-button"><span aria-hidden="true">◇</span><span>Games</span></button>
+      </nav>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+  </body>
+</html>

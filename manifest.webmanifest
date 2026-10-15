@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "Susi World",
+  "short_name": "Susi",
+  "description": "A cozy little space for to-dos, moods, sweet notes, and playful puzzles.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f3e9",
+  "theme_color": "#f7f3e9",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
