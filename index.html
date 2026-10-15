@@ -24,7 +24,7 @@
           <span class="brand-mark" aria-hidden="true">s</span>
           <span class="brand-copy"><span class="greeting" id="greet">Hello, Susi</span><span class="brand-name">Susi World</span></span>
         </a>
-        <div class="header-actions"><span class="day-mark"><span class="day-dot"></span><span id="todayShort">A little space for you</span></span><button class="install-button" id="installBtn" type="button">Install</button></div>
+        <div class="header-actions"><span class="day-mark"><span class="day-dot"></span><span id="todayShort">A little space for you</span></span><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">◐</button><button class="install-button" id="installBtn" type="button">Install</button></div>
       </header>
 
       <main>
@@ -34,7 +34,7 @@
             <div class="welcome-copy">
               <p class="eyebrow" id="today"></p>
               <h2>Make room for<br /><span>the little things.</span></h2>
-              <p class="quote" id="quote"></p>
+              <div class="quote-row"><p class="quote" id="quote"></p><button class="quote-refresh" id="newQuote" type="button">New quote <span aria-hidden="true">↻</span></button></div>
             </div>
             <div class="sun-doodle" aria-hidden="true"><span>✳</span><i></i><b></b></div>
           </div>
@@ -61,6 +61,10 @@
             <div class="game-feature-copy"><p class="eyebrow">A CHANGE OF PACE</p><h2 id="game-feature-title">A little play?</h2><p>Four tiny puzzles for a curious minute.</p></div>
             <button class="primary-button" data-go="games">Visit the game nook <span aria-hidden="true">→</span></button>
           </section>
+          <section class="data-tools" aria-labelledby="data-tools-title">
+            <div><p class="eyebrow">YOUR DATA, YOURS</p><h2 id="data-tools-title">Keep a backup</h2></div>
+            <div class="data-actions"><button class="game-secondary" id="exportData" type="button">Export backup</button><button class="game-secondary" id="importData" type="button">Import backup</button><input id="importFile" type="file" accept=".json,application/json" hidden /></div>
+          </section>
         </section>
 
         <section class="view" id="view-todos" aria-labelledby="todos-h" hidden>
@@ -84,14 +88,17 @@
             <label class="sr-only" for="moodNote">Optional mood note</label><textarea id="moodNote" maxlength="280" rows="2" placeholder="Anything on your mind? (optional)"></textarea>
             <div class="form-footer"><span id="moodSavedHint">Your check-in stays just with you.</span><button class="primary-button" type="submit">Save check-in <span aria-hidden="true">→</span></button></div>
           </form>
-          <section class="history-section" aria-labelledby="history-title"><div class="list-heading"><h2 id="history-title">Recent check-ins</h2><span>Last 14 days</span></div><div class="mood-chart" id="moodChart" aria-label="Mood history"></div><ul class="mood-history" id="moodList"></ul><p class="empty-state" id="moodEmpty">Your first check-in will show up here.</p></section>
+          <section class="streak-panel" aria-labelledby="streak-title"><div class="streak-count"><p class="eyebrow">SHOWING UP FOR YOU</p><h2 id="streak-title"><span id="moodStreakCount">0</span> <span id="moodStreakLabel">day streak</span></h2></div><div class="streak-badges" id="moodBadges" aria-label="Mood check-in badges"></div></section>
+          <section class="history-section" aria-labelledby="history-title"><div class="list-heading"><h2 id="history-title">Mood history</h2><div class="chart-range" role="group" aria-label="Mood chart range"><button type="button" data-chart-range="week" aria-pressed="true">Week</button><button type="button" data-chart-range="month" aria-pressed="false">Month</button></div></div><div class="mood-chart" id="moodChart" aria-label="Mood history chart"></div><ul class="mood-history" id="moodList"></ul><p class="empty-state" id="moodEmpty">Your first check-in will show up here.</p></section>
         </section>
 
         <section class="view" id="view-notes" aria-labelledby="notes-h" hidden>
           <div class="view-heading"><p class="eyebrow">KEEP WHAT MATTERS</p><h1 id="notes-h">Sweet notes</h1><p>A memory, a wish, or something worth remembering.</p></div>
-          <form class="note-form" id="noteForm"><label class="sr-only" for="noteInput">Write a note</label><textarea id="noteInput" maxlength="500" rows="3" placeholder="Write a little note, a memory or a wish…"></textarea><div class="note-actions"><fieldset class="swatches"><legend class="sr-only">Note color</legend><label><input type="radio" name="color" value="pink" checked /><span class="swatch swatch-pink" aria-label="Pink"></span></label><label><input type="radio" name="color" value="peach" /><span class="swatch swatch-peach" aria-label="Peach"></span></label><label><input type="radio" name="color" value="lilac" /><span class="swatch swatch-lilac" aria-label="Lilac"></span></label><label><input type="radio" name="color" value="mint" /><span class="swatch swatch-mint" aria-label="Mint"></span></label></fieldset><button class="primary-button" type="submit">Pin note <span aria-hidden="true">↗</span></button></div></form>
+          <form class="note-form" id="noteForm"><label class="sr-only" for="noteInput">Write a note</label><textarea id="noteInput" maxlength="500" rows="3" placeholder="Write a little note, a memory or a wish…"></textarea><label class="sr-only" for="noteTags">Tags, separated by commas</label><input class="tag-input" id="noteTags" maxlength="120" placeholder="Add tags (optional, separated by commas)" /><div class="note-actions"><fieldset class="swatches"><legend class="sr-only">Note color</legend><label><input type="radio" name="color" value="pink" checked /><span class="swatch swatch-pink" aria-label="Pink"></span></label><label><input type="radio" name="color" value="peach" /><span class="swatch swatch-peach" aria-label="Peach"></span></label><label><input type="radio" name="color" value="lilac" /><span class="swatch swatch-lilac" aria-label="Lilac"></span></label><label><input type="radio" name="color" value="mint" /><span class="swatch swatch-mint" aria-label="Mint"></span></label></fieldset><button class="primary-button" type="submit">Pin note <span aria-hidden="true">↗</span></button></div></form>
+          <div class="note-filters"><label class="search-field"><span class="sr-only">Search notes and tags</span><input id="noteSearch" type="search" placeholder="Search notes or tags…" /></label><label class="date-field"><span class="sr-only">Filter notes by date</span><input id="noteDateFilter" type="date" /></label><button class="text-button" id="clearNoteFilters" type="button">Clear</button></div>
           <div class="notes-grid" id="noteGrid"></div>
           <p class="empty-state empty-large" id="notesEmpty">Your little collection starts with one note.</p>
+          <p class="empty-state empty-large" id="notesNoResults" hidden>No notes match those filters.</p>
         </section>
 
         <section class="view" id="view-games" aria-labelledby="games-h" hidden>

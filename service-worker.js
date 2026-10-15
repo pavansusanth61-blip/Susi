@@ -1,4 +1,4 @@
-const cacheName = "susi-world-shell-v1";
+const cacheName = "susi-world-shell-v2";
 const appFiles = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {

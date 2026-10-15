@@ -1,4 +1,5 @@
 const storageKey = "susi-world-v1";
+const themeStorageKey = "susi-world-theme-v1";
 const today = new Date();
 const todayKey = toDateKey(today);
 const quotes = [
@@ -12,6 +13,7 @@ let toastTimer;
 let state = loadState();
 let activeGame = null;
 let memoryState = null;
+let moodChartRange = "week";
 
 function toDateKey(date) {
   const year = date.getFullYear();
@@ -20,21 +22,58 @@ function toDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
-function loadState() {
+function getStorage() {
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
-    return {
-      todos: Array.isArray(saved.todos) ? saved.todos : [],
-      moods: Array.isArray(saved.moods) ? saved.moods : [],
-      notes: Array.isArray(saved.notes) ? saved.notes : []
-    };
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function loadState() {
+  const storage = getStorage();
+  if (!storage) return { todos: [], moods: [], notes: [] };
+  try {
+    const saved = JSON.parse(storage.getItem(storageKey) || "{}");
+    return normalizeState(saved);
   } catch {
     return { todos: [], moods: [], notes: [] };
   }
 }
 
+function normalizeState(saved) {
+  const colors = new Set(["pink", "peach", "lilac", "mint"]);
+  return {
+    todos: (Array.isArray(saved.todos) ? saved.todos : []).filter((todo) => todo && typeof todo.text === "string").map((todo) => ({
+      id: typeof todo.id === "string" ? todo.id : crypto.randomUUID(),
+      text: todo.text,
+      done: Boolean(todo.done)
+    })),
+    moods: (Array.isArray(saved.moods) ? saved.moods : []).filter((mood) => mood && /^\d{4}-\d{2}-\d{2}$/.test(mood.date) && Number(mood.score) >= 1 && Number(mood.score) <= 5).map((mood) => ({
+      date: mood.date,
+      score: Number(mood.score),
+      emoji: typeof mood.emoji === "string" ? mood.emoji : "😌",
+      label: typeof mood.label === "string" ? mood.label : "Okay",
+      note: typeof mood.note === "string" ? mood.note : ""
+    })),
+    notes: (Array.isArray(saved.notes) ? saved.notes : []).filter((note) => note && typeof note.text === "string").map((note) => ({
+      id: typeof note.id === "string" ? note.id : crypto.randomUUID(),
+      text: note.text,
+      color: colors.has(note.color) ? note.color : "pink",
+      tags: Array.isArray(note.tags) ? note.tags.filter((tag) => typeof tag === "string").slice(0, 12) : [],
+      createdAt: Number.isFinite(Number(note.createdAt)) ? Number(note.createdAt) : Date.now()
+    }))
+  };
+}
+
 function persist() {
-  localStorage.setItem(storageKey, JSON.stringify(state));
+  const storage = getStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(storageKey, JSON.stringify(state));
+  } catch {
+    // Ignore storage errors, such as in private or restricted browser contexts.
+  }
 }
 
 function escapeHtml(value) {
@@ -71,6 +110,43 @@ function renderTodos() {
   document.querySelector("#homeTodosEmpty").hidden = openTodos.length > 0;
 }
 
+function renderMoodChart(moods) {
+  const moodByDate = new Map(moods.map((mood) => [mood.date, mood]));
+  const dayCount = moodChartRange === "month" ? 30 : 7;
+  const chartDays = Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (dayCount - index - 1));
+    const key = toDateKey(date);
+    const mood = moodByDate.get(key);
+    const label = moodChartRange === "week"
+      ? date.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 1)
+      : (index % 5 === 0 || index === dayCount - 1 ? String(date.getDate()) : "");
+    return `<div class="chart-day" title="${escapeHtml(formatDate(key))}: ${mood ? `${mood.score} out of 5` : "no check-in"}">
+      <div class="chart-bar${mood ? "" : " is-empty"}" style="height:${mood ? Math.max(12, mood.score * 15) : 5}px"></div><span>${escapeHtml(label)}</span>
+    </div>`;
+  });
+  const chart = document.querySelector("#moodChart");
+  chart.dataset.range = moodChartRange;
+  chart.innerHTML = chartDays.join("");
+  document.querySelectorAll("[data-chart-range]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.chartRange === moodChartRange));
+  });
+  const streakDates = new Set(moods.map((mood) => mood.date));
+  const streakStart = new Date();
+  if (!streakDates.has(todayKey)) streakStart.setDate(streakStart.getDate() - 1);
+  let streak = 0;
+  while (streakDates.has(toDateKey(streakStart))) {
+    streak += 1;
+    streakStart.setDate(streakStart.getDate() - 1);
+  }
+  document.querySelector("#moodStreakCount").textContent = streak;
+  document.querySelector("#moodStreakLabel").textContent = streak === 1 ? "day streak" : "day streak";
+  document.querySelector("#moodBadges").innerHTML = [3, 7, 30].map((milestone) => `
+    <div class="streak-badge${streak >= milestone ? " earned" : ""}" title="${streak >= milestone ? `${milestone}-day badge earned` : `Check in for ${milestone} days in a row`}" aria-label="${streak >= milestone ? `${milestone}-day badge earned` : `${milestone}-day badge locked`}">
+      <strong>${milestone}</strong><span>days</span>
+    </div>`).join("");
+}
+
 function renderMoods() {
   const moods = [...state.moods].sort((left, right) => right.date.localeCompare(left.date));
   const todayMood = moods.find((mood) => mood.date === todayKey);
@@ -82,11 +158,8 @@ function renderMoods() {
   });
   document.querySelector("#moodNote").value = todayMood?.note || "";
 
+  renderMoodChart(moods);
   const recent = moods.slice(0, 14);
-  document.querySelector("#moodChart").innerHTML = recent.slice().reverse().map((mood) => `
-    <div class="chart-day" title="${escapeHtml(formatDate(mood.date))}: ${mood.score} out of 5">
-      <div class="chart-bar" style="height:${Math.max(12, mood.score * 15)}px"></div><span>${escapeHtml(formatDate(mood.date, { weekday: "narrow" }))}</span>
-    </div>`).join("");
   document.querySelector("#moodList").innerHTML = recent.map((mood) => `
     <li><span class="history-emoji" aria-hidden="true">${escapeHtml(mood.emoji)}</span><div class="history-copy"><strong>${escapeHtml(mood.label)}</strong>${mood.note ? `<span>${escapeHtml(mood.note)}</span>` : ""}</div><span class="history-date">${escapeHtml(mood.date === todayKey ? "Today" : formatDate(mood.date))}</span></li>`).join("");
   document.querySelector("#moodEmpty").hidden = recent.length > 0;
@@ -94,13 +167,22 @@ function renderMoods() {
 
 function renderNotes() {
   const notes = [...state.notes].sort((left, right) => right.createdAt - left.createdAt);
+  const search = document.querySelector("#noteSearch").value.trim().toLocaleLowerCase();
+  const dateFilter = document.querySelector("#noteDateFilter").value;
+  const filteredNotes = notes.filter((note) => {
+    const tags = Array.isArray(note.tags) ? note.tags : [];
+    const matchesSearch = !search || note.text.toLocaleLowerCase().includes(search) || tags.some((tag) => tag.toLocaleLowerCase().includes(search));
+    const matchesDate = !dateFilter || toDateKey(new Date(note.createdAt)) === dateFilter;
+    return matchesSearch && matchesDate;
+  });
   document.querySelector("#statNotes").textContent = notes.length;
   document.querySelector("#homeNote").innerHTML = notes[0] ? `
     <div class="note-slip">${escapeHtml(notes[0].text).replace(/\n/g, "<br>")}<span class="note-date">${escapeHtml(formatDate(toDateKey(new Date(notes[0].createdAt))))}</span></div>` : "";
   document.querySelector("#homeNoteEmpty").hidden = notes.length > 0;
-  document.querySelector("#noteGrid").innerHTML = notes.map((note) => `
-    <article class="note-card" data-color="${escapeHtml(note.color)}"><p>${escapeHtml(note.text)}</p><footer><span>${escapeHtml(formatDate(toDateKey(new Date(note.createdAt))))}</span><button class="icon-button" data-delete-note="${note.id}" aria-label="Delete note">×</button></footer></article>`).join("");
+  document.querySelector("#noteGrid").innerHTML = filteredNotes.map((note) => `
+    <article class="note-card" data-color="${escapeHtml(note.color)}"><p>${escapeHtml(note.text)}</p>${note.tags?.length ? `<div class="note-tags">${note.tags.map((tag) => `<span class="note-tag">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}<footer><span>${escapeHtml(formatDate(toDateKey(new Date(note.createdAt))))}</span><button class="icon-button" data-delete-note="${note.id}" aria-label="Delete note">×</button></footer></article>`).join("");
   document.querySelector("#notesEmpty").hidden = notes.length > 0;
+  document.querySelector("#notesNoResults").hidden = notes.length === 0 || filteredNotes.length > 0;
 }
 
 function render() {
@@ -141,6 +223,99 @@ document.querySelector("#todoForm").addEventListener("submit", (event) => {
   renderTodos();
   input.value = "";
   showToast("Added to your list");
+});
+
+document.querySelector("#newQuote").addEventListener("click", () => {
+  const quoteElement = document.querySelector("#quote");
+  const nextQuotes = quotes.filter((quote) => quote !== quoteElement.textContent);
+  quoteElement.textContent = nextQuotes[Math.floor(Math.random() * nextQuotes.length)];
+});
+
+document.querySelectorAll("[data-chart-range]").forEach((button) => {
+  button.addEventListener("click", () => {
+    moodChartRange = button.dataset.chartRange;
+    renderMoodChart([...state.moods].sort((left, right) => right.date.localeCompare(left.date)));
+  });
+});
+
+document.querySelector("#noteSearch").addEventListener("input", renderNotes);
+document.querySelector("#noteDateFilter").addEventListener("change", renderNotes);
+document.querySelector("#clearNoteFilters").addEventListener("click", () => {
+  document.querySelector("#noteSearch").value = "";
+  document.querySelector("#noteDateFilter").value = "";
+  renderNotes();
+});
+
+function applyTheme(theme) {
+  const selectedTheme = theme === "dark" ? "dark" : "light";
+  document.body.dataset.theme = selectedTheme;
+  const button = document.querySelector("#themeToggle");
+  const label = selectedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  button.textContent = selectedTheme === "dark" ? "☼" : "◐";
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  document.querySelector('meta[name="theme-color"]').content = selectedTheme === "dark" ? "#202823" : "#f7f3e9";
+}
+
+function saveThemePreference(theme) {
+  try {
+    getStorage()?.setItem(themeStorageKey, theme);
+  } catch {
+    // Keep the current theme even when browser storage is unavailable.
+  }
+}
+
+const storedTheme = getStorage()?.getItem(themeStorageKey) || "light";
+applyTheme(storedTheme);
+document.querySelector("#themeToggle").addEventListener("click", () => {
+  const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(nextTheme);
+  saveThemePreference(nextTheme);
+});
+
+document.querySelector("#exportData").addEventListener("click", () => {
+  const backup = {
+    format: "susi-world-backup",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    theme: document.body.dataset.theme,
+    data: state
+  };
+  const file = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  const objectUrl = URL.createObjectURL(file);
+  link.href = objectUrl;
+  link.download = `susi-world-backup-${todayKey}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  showToast("Backup downloaded");
+});
+
+document.querySelector("#importData").addEventListener("click", () => document.querySelector("#importFile").click());
+document.querySelector("#importFile").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const backup = JSON.parse(await file.text());
+    if (backup.format !== "susi-world-backup" || backup.version !== 1 || !backup.data || !Array.isArray(backup.data.todos) || !Array.isArray(backup.data.moods) || !Array.isArray(backup.data.notes)) {
+      throw new Error("This file is not a Susi World backup.");
+    }
+    if (!window.confirm("Import this backup and replace the data currently saved in this browser?")) return;
+    state = normalizeState(backup.data);
+    persist();
+    if (backup.theme === "dark" || backup.theme === "light") {
+      applyTheme(backup.theme);
+      saveThemePreference(backup.theme);
+    }
+    render();
+    showToast("Backup restored");
+  } catch (error) {
+    showToast(error instanceof SyntaxError ? "That file is not valid JSON" : error.message || "Could not import that backup");
+  } finally {
+    event.target.value = "";
+  }
 });
 
 document.addEventListener("click", (event) => {
@@ -225,7 +400,7 @@ document.querySelector("#moodForm").addEventListener("submit", (event) => {
   const [score, emoji] = selected.value.split("|");
   const labels = ["", "Low", "Meh", "Okay", "Good", "Amazing"];
   const checkIn = { date: todayKey, score: Number(score), emoji, label: labels[Number(score)], note: document.querySelector("#moodNote").value.trim() };
-  state.moods = [checkIn, ...state.moods.filter((mood) => mood.date !== todayKey)].slice(0, 14);
+  state.moods = [checkIn, ...state.moods.filter((mood) => mood.date !== todayKey)];
   persist();
   renderMoods();
   showToast("Check-in saved");
@@ -237,10 +412,12 @@ document.querySelector("#noteForm").addEventListener("submit", (event) => {
   const text = input.value.trim();
   if (!text) return input.focus();
   const color = document.querySelector('input[name="color"]:checked').value;
-  state.notes.unshift({ id: crypto.randomUUID(), text, color, createdAt: Date.now() });
+  const tags = [...new Set(document.querySelector("#noteTags").value.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag) => tag.slice(0, 30)))].slice(0, 12);
+  state.notes.unshift({ id: crypto.randomUUID(), text, color, tags, createdAt: Date.now() });
   persist();
   renderNotes();
   input.value = "";
+  document.querySelector("#noteTags").value = "";
   showToast("A little note to keep");
 });
 
@@ -251,29 +428,32 @@ document.querySelector("#quote").textContent = quotes[Math.floor(Math.random() *
 let installPrompt = null;
 const installButton = document.querySelector("#installBtn");
 const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-installButton.hidden = isStandalone;
+const standaloneMediaQuery = typeof window.matchMedia === "function" ? window.matchMedia("(display-mode: standalone)") : { matches: false };
+const isStandalone = standaloneMediaQuery.matches || window.navigator.standalone === true;
+if (installButton) installButton.hidden = isStandalone;
 
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   installPrompt = event;
-  installButton.hidden = false;
+  if (installButton) installButton.hidden = false;
 });
 
-installButton.addEventListener("click", async () => {
-  if (!installPrompt) {
-    showToast(isIos ? "Tap Share, then choose Add to Home Screen." : "Choose Install Susi World from your browser menu.");
-    return;
-  }
-  installPrompt.prompt();
-  const choice = await installPrompt.userChoice;
-  installPrompt = null;
-  if (choice.outcome === "accepted") installButton.hidden = true;
-});
+if (installButton) {
+  installButton.addEventListener("click", async () => {
+    if (!installPrompt) {
+      showToast(isIos ? "Tap Share, then choose Add to Home Screen." : "Choose Install Susi World from your browser menu.");
+      return;
+    }
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    installPrompt = null;
+    if (choice.outcome === "accepted") installButton.hidden = true;
+  });
+}
 
 window.addEventListener("appinstalled", () => {
   installPrompt = null;
-  installButton.hidden = true;
+  if (installButton) installButton.hidden = true;
   showToast("Susi World is installed");
 });
 
